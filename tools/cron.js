@@ -316,7 +316,8 @@ export function mount(container) {
   <div class="cron-header">
     <div class="cron-mode-tabs">
       <button class="cron-mbtn" id="cron-mbtn-spring">Spring @Scheduled<br><small style="font-weight:400;opacity:.65">6 champs</small></button>
-      <button class="cron-mbtn" id="cron-mbtn-unix">Unix / Quartz<br><small style="font-weight:400;opacity:.65">5 champs</small></button>
+      <button class="cron-mbtn" id="cron-mbtn-unix">Unix / Crontab<br><small style="font-weight:400;opacity:.65">5 champs</small></button>
+      <button class="cron-mbtn" id="cron-mbtn-quartz">Quartz<br><small style="font-weight:400;opacity:.65">7 champs (+ année)</small></button>
     </div>
     <div class="cron-expr-card">
       <div class="cron-input-row">
@@ -368,28 +369,35 @@ export function mount(container) {
       presets:[{l:'0',v:'0'},{l:'*/5',v:'*/5'},{l:'*/10',v:'*/10'},{l:'*/15',v:'*/15'},{l:'*/30',v:'*/30'},{l:'*',v:'*'}] },
     { id:'hours',   label:'Heures',   hint:'0–23  •  8-18 = entre 8h et 18h', range:[0,23],
       presets:[{l:'0',v:'0'},{l:'6',v:'6'},{l:'8',v:'8'},{l:'12',v:'12'},{l:'18',v:'18'},{l:'*/2',v:'*/2'},{l:'*',v:'*'}] },
-    { id:'dom',     label:'Jour mois',hint:'1–31  •  L = dernier jour du mois', range:[1,31],
-      presets:[{l:'*',v:'*'},{l:'1',v:'1'},{l:'15',v:'15'},{l:'L',v:'L'},{l:'1,15',v:'1,15'}] },
+    { id:'dom',     label:'Jour mois',hint:'1–31  •  L = dernier jour du mois  •  ? = non utilisé (Quartz)', range:[1,31],
+      presets:[{l:'*',v:'*'},{l:'?',v:'?'},{l:'1',v:'1'},{l:'15',v:'15'},{l:'L',v:'L'},{l:'1,15',v:'1,15'}] },
     { id:'months',  label:'Mois',     hint:'1–12  •  1,7 = jan et juil', range:[1,12],
       presets:[{l:'*',v:'*'},{l:'Jan',v:'1'},{l:'Fév',v:'2'},{l:'Mar',v:'3'},{l:'Avr',v:'4'},{l:'Mai',v:'5'},{l:'Jun',v:'6'},{l:'Jul',v:'7'},{l:'Aoû',v:'8'},{l:'Sep',v:'9'},{l:'Oct',v:'10'},{l:'Nov',v:'11'},{l:'Déc',v:'12'}] },
-    { id:'dow',     label:'Jour sem.', hint:'0=dim … 6=sam  •  1-5 = lun–ven', range:[0,7],
-      presets:[{l:'*',v:'*'},{l:'Lun',v:'1'},{l:'Mar',v:'2'},{l:'Mer',v:'3'},{l:'Jeu',v:'4'},{l:'Ven',v:'5'},{l:'Sam',v:'6'},{l:'Dim',v:'0'},{l:'Lun–Ven',v:'1-5'},{l:'Week-end',v:'6,0'}] },
+    { id:'dow',     label:'Jour sem.', hint:'0=dim … 6=sam (Unix/Spring) — 1=dim … 7=sam (Quartz)  •  1-5 = lun–ven  •  ? = non utilisé (Quartz)', range:[0,7],
+      presets:[{l:'*',v:'*'},{l:'?',v:'?'},{l:'Lun',v:'1'},{l:'Mar',v:'2'},{l:'Mer',v:'3'},{l:'Jeu',v:'4'},{l:'Ven',v:'5'},{l:'Sam',v:'6'},{l:'Dim',v:'0'},{l:'Lun–Ven',v:'1-5'},{l:'Week-end',v:'6,0'}] },
   ];
 
   const FIELDS_UNIX = FIELDS_SPRING.slice(1); // sans secondes
 
+  // Quartz : 7 champs = Spring 6 champs + année (optionnelle)
+  const FIELDS_QUARTZ = [
+    ...FIELDS_SPRING,
+    { id:'year', label:'Année', hint:'1970–2099  •  * = toutes les années  •  2024-2030 = entre 2024 et 2030', range:[1970,2099],
+      presets:[{l:'*',v:'*'},{l:'2024',v:'2024'},{l:'2025',v:'2025'},{l:'2026',v:'2026'},{l:'2024-2030',v:'2024-2030'}] },
+  ];
+
   const SHORTCUTS = [
-    { label:'Chaque minute',        s:'0 * * * * *',  u:'* * * * *'   },
-    { label:'Chaque heure',         s:'0 0 * * * *',  u:'0 * * * *'   },
-    { label:'Chaque jour à minuit', s:'0 0 0 * * *',  u:'0 0 * * *'   },
-    { label:'Chaque jour à 8h',     s:'0 0 8 * * *',  u:'0 8 * * *'   },
-    { label:'Jours ouvrés à 9h',    s:'0 0 9 * * 1-5',u:'0 9 * * 1-5' },
-    { label:'Toutes les 15 min',    s:'0 */15 * * * *',u:'*/15 * * * *'},
-    { label:'Toutes les 30 min',    s:'0 */30 * * * *',u:'*/30 * * * *'},
-    { label:'1er du mois à minuit', s:'0 0 0 1 * *',  u:'0 0 1 * *'   },
-    { label:'Chaque dimanche 2h',   s:'0 0 2 * * 0',  u:'0 2 * * 0'   },
-    { label:'Chaque lundi à 6h',    s:'0 0 6 * * 1',  u:'0 6 * * 1'   },
-    { label:'Chaque année (1 jan)', s:'0 0 0 1 1 *',  u:'0 0 1 1 *'   },
+    { label:'Chaque minute',        s:'0 * * * * *',   u:'* * * * *',    q:'0 * * * * ? *'    },
+    { label:'Chaque heure',         s:'0 0 * * * *',   u:'0 * * * *',    q:'0 0 * * * ? *'    },
+    { label:'Chaque jour à minuit', s:'0 0 0 * * *',   u:'0 0 * * *',    q:'0 0 0 * * ? *'    },
+    { label:'Chaque jour à 8h',     s:'0 0 8 * * *',   u:'0 8 * * *',    q:'0 0 8 * * ? *'    },
+    { label:'Jours ouvrés à 9h',    s:'0 0 9 * * 1-5', u:'0 9 * * 1-5',  q:'0 0 9 ? * 2-6 *'  },
+    { label:'Toutes les 15 min',    s:'0 */15 * * * *',u:'*/15 * * * *', q:'0 */15 * * * ? *' },
+    { label:'Toutes les 30 min',    s:'0 */30 * * * *',u:'*/30 * * * *', q:'0 */30 * * * ? *' },
+    { label:'1er du mois à minuit', s:'0 0 0 1 * *',   u:'0 0 1 * *',    q:'0 0 0 1 * ? *'    },
+    { label:'Chaque dimanche 2h',   s:'0 0 2 * * 0',   u:'0 2 * * 0',    q:'0 0 2 ? * 1 *'    },
+    { label:'Chaque lundi à 6h',    s:'0 0 6 * * 1',   u:'0 6 * * 1',    q:'0 0 6 ? * 2 *'    },
+    { label:'Chaque année (1 jan)', s:'0 0 0 1 1 *',   u:'0 0 1 1 *',    q:'0 0 0 1 1 ? *'    },
   ];
 
   // ══════════════════════════════════════════════
@@ -404,6 +412,7 @@ export function mount(container) {
 
   document.getElementById('cron-mbtn-spring').addEventListener('click', () => setMode('spring'));
   document.getElementById('cron-mbtn-unix').addEventListener('click',   () => setMode('unix'));
+  document.getElementById('cron-mbtn-quartz').addEventListener('click', () => setMode('quartz'));
 
   document.getElementById('cron-copy-btn').addEventListener('click', () => {
     const expr = document.getElementById('cron-expr').value.trim();
@@ -427,19 +436,33 @@ export function mount(container) {
     mode = m;
     document.getElementById('cron-mbtn-spring').classList.toggle('active', m === 'spring');
     document.getElementById('cron-mbtn-unix').classList.toggle('active',   m === 'unix');
+    document.getElementById('cron-mbtn-quartz').classList.toggle('active', m === 'quartz');
 
     const current = document.getElementById('cron-expr').value.trim();
     const parts = current.split(/\s+/);
-    if (m === 'spring' && parts.length === 5) {
-      document.getElementById('cron-expr').value = '0 ' + current;
-    } else if (m === 'unix' && parts.length === 6) {
-      document.getElementById('cron-expr').value = parts.slice(1).join(' ');
-    } else if (!current) {
-      document.getElementById('cron-expr').value = m === 'spring' ? '0 0 9 * * 1-5' : '0 9 * * 1-5';
+    // Adapter le nombre de champs en fonction du nouveau mode
+    if (m === 'spring') {
+      if (parts.length === 5) document.getElementById('cron-expr').value = '0 ' + current;
+      else if (parts.length === 7) document.getElementById('cron-expr').value = parts.slice(0,6).join(' ');
+      else if (!current) document.getElementById('cron-expr').value = '0 0 9 * * 1-5';
+    } else if (m === 'unix') {
+      if (parts.length === 6) document.getElementById('cron-expr').value = parts.slice(1).join(' ');
+      else if (parts.length === 7) document.getElementById('cron-expr').value = parts.slice(1,6).join(' ');
+      else if (!current) document.getElementById('cron-expr').value = '0 9 * * 1-5';
+    } else if (m === 'quartz') {
+      if (parts.length === 5) document.getElementById('cron-expr').value = '0 ' + current + ' *';
+      else if (parts.length === 6) document.getElementById('cron-expr').value = current + ' *';
+      else if (!current) document.getElementById('cron-expr').value = '0 0 9 ? * 2-6 *';
     }
 
     rebuildUI();
     fromExpr();
+  }
+
+  function getFields() {
+    if (mode === 'quartz') return FIELDS_QUARTZ;
+    if (mode === 'spring') return FIELDS_SPRING;
+    return FIELDS_UNIX;
   }
 
   // ══════════════════════════════════════════════
@@ -447,7 +470,7 @@ export function mount(container) {
   // ══════════════════════════════════════════════
 
   function rebuildUI() {
-    const fields = mode === 'spring' ? FIELDS_SPRING : FIELDS_UNIX;
+    const fields = getFields();
 
     // Strip de labels/valeurs
     document.getElementById('cron-field-strip').innerHTML = fields.map(f =>
@@ -489,8 +512,8 @@ export function mount(container) {
 
     // Shortcuts
     document.getElementById('cron-shortcuts').innerHTML = SHORTCUTS.map(s => {
-      const expr = mode === 'spring' ? s.s : s.u;
-      return `<button class="cron-shortcut" data-spring="${s.s}" data-unix="${s.u}">
+      const expr = mode === 'spring' ? s.s : mode === 'quartz' ? s.q : s.u;
+      return `<button class="cron-shortcut" data-spring="${s.s}" data-unix="${s.u}" data-quartz="${s.q}">
         <span class="sc-label">${s.label}</span>
         <span class="sc-expr">${expr}</span>
       </button>`;
@@ -498,7 +521,7 @@ export function mount(container) {
 
     document.getElementById('cron-shortcuts').querySelectorAll('.cron-shortcut').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.getElementById('cron-expr').value = mode === 'spring' ? btn.dataset.spring : btn.dataset.unix;
+        document.getElementById('cron-expr').value = mode === 'spring' ? btn.dataset.spring : mode === 'quartz' ? btn.dataset.quartz : btn.dataset.unix;
         fromExpr();
       });
     });
@@ -515,7 +538,7 @@ export function mount(container) {
   // ══════════════════════════════════════════════
 
   function fromBuilder() {
-    const fields = mode === 'spring' ? FIELDS_SPRING : FIELDS_UNIX;
+    const fields = getFields();
     const parts = fields.map(f => {
       const v = document.getElementById(`custom-${f.id}`)?.value.trim();
       return v || '*';
@@ -531,7 +554,7 @@ export function mount(container) {
   function fromExpr() {
     const expr = document.getElementById('cron-expr').value.trim();
     const parts = expr.split(/\s+/);
-    const fields = mode === 'spring' ? FIELDS_SPRING : FIELDS_UNIX;
+    const fields = getFields();
     const n = fields.length;
 
     if (parts.length === n) {
@@ -551,7 +574,7 @@ export function mount(container) {
 
   function validate(expr) {
     const parts = expr.trim().split(/\s+/);
-    const fields = mode === 'spring' ? FIELDS_SPRING : FIELDS_UNIX;
+    const fields = getFields();
     const n = fields.length;
     const dot  = document.getElementById('cron-dot');
     const desc = document.getElementById('cron-desc');
@@ -569,6 +592,19 @@ export function mount(container) {
       document.getElementById('cron-next-panel').style.display = 'none';
       document.getElementById('cron-spring-panel').style.display = 'none';
       return;
+    }
+
+    // Validation Quartz : exactement un de dom/dow doit être ?
+    if (mode === 'quartz') {
+      const dom = parts[3], dow = parts[5];
+      if (dom !== '?' && dow !== '?') {
+        dot.style.background = '#D85A30';
+        desc.textContent = "Quartz : un seul des champs 'jour mois' ou 'jour semaine' doit être renseigné, l'autre doit être '?'";
+        inp.classList.add('err');
+        document.getElementById('cron-next-panel').style.display = 'none';
+        document.getElementById('cron-spring-panel').style.display = 'none';
+        return;
+      }
     }
 
     inp.classList.remove('err');
@@ -592,8 +628,14 @@ export function mount(container) {
       document.getElementById('cron-next-panel').style.display = 'none';
     }
 
-    // Code Spring
-    const springExpr = mode === 'spring' ? expr.trim() : '0 ' + expr.trim();
+    // Code Spring (toujours 6 champs)
+    let springExpr;
+    if (mode === 'spring') springExpr = expr.trim();
+    else if (mode === 'unix') springExpr = '0 ' + expr.trim();
+    else { // quartz : retirer le champ année (7e), garder les 6 premiers, ? → *
+      const p = expr.trim().split(/\s+/);
+      springExpr = p.slice(0, 6).map(x => x === '?' ? '*' : x).join(' ');
+    }
     document.getElementById('cron-spring-panel').style.display = '';
     document.getElementById('cron-spring-code').innerHTML =
       `<span class="cc">// Spring Boot — @EnableScheduling requis</span>\n\n` +
@@ -608,8 +650,9 @@ export function mount(container) {
   // ══════════════════════════════════════════════
 
   function describe(parts) {
-    let sec = '0', min, hour, dom, month, dow;
+    let sec = '0', min, hour, dom, month, dow, year;
     if (mode === 'spring') [sec, min, hour, dom, month, dow] = parts;
+    else if (mode === 'quartz') [sec, min, hour, dom, month, dow, year] = parts;
     else [min, hour, dom, month, dow] = parts;
 
     const chunks = [];
@@ -657,6 +700,13 @@ export function mount(container) {
       }
     }
 
+    // Année (Quartz uniquement)
+    if (year && year !== '*' && year !== '?') {
+      if (year.includes('-')) { const [a,b]=year.split('-'); chunks.push(`de ${a} à ${b}`); }
+      else if (year.includes(',')) chunks.push('en ' + year);
+      else chunks.push('en ' + year);
+    }
+
     return chunks.length ? cap(chunks.join(', ')) : 'Toutes les minutes';
   }
 
@@ -667,22 +717,35 @@ export function mount(container) {
   // ══════════════════════════════════════════════
 
   function nextRuns(parts, count) {
-    let sec='0', min, hour, dom, month, dow;
+    let sec='0', min, hour, dom, month, dow, year='*';
     if (mode === 'spring') [sec,min,hour,dom,month,dow] = parts;
+    else if (mode === 'quartz') [sec,min,hour,dom,month,dow,year] = parts;
     else [min,hour,dom,month,dow] = parts;
 
     const results = [];
     const cursor = new Date();
     cursor.setMilliseconds(0);
     cursor.setSeconds(cursor.getSeconds() + 1);
-    const limit = new Date(cursor.getTime() + 366*24*3600*1000);
+    // Pour Quartz : limite étendue selon l'année
+    let limitYears = 1;
+    if (mode === 'quartz' && year !== '*' && year !== '?') {
+      const m = year.match(/(\d{4})/g);
+      if (m) { const max = Math.max(...m.map(Number)); limitYears = Math.max(1, max - new Date().getFullYear() + 1); }
+    }
+    const limit = new Date(cursor.getTime() + limitYears * 366*24*3600*1000);
     let iter = 0;
+    const MAX_ITER = mode === 'quartz' && year !== '*' ? 5000000 : 600000;
 
-    while (results.length < count && cursor < limit && iter < 600000) {
+    while (results.length < count && cursor < limit && iter < MAX_ITER) {
       iter++;
-      if (mf(cursor.getMonth()+1, month, 1,12) &&
-          mf(cursor.getDate(),    dom,   1,31) &&
-          mdow(cursor.getDay(),   dow) &&
+      // Pour Quartz, le jour de la semaine est 1=dim..7=sam, on convertit en 0=dim..6=sam
+      const dowCheck = (dow === '?') ? true : mdow(cursor.getDay(), dow);
+      const domCheck = (dom === '?') ? true : mf(cursor.getDate(), dom, 1, 31);
+      const yearCheck = (mode !== 'quartz' || year === '*' || year === '?') ? true : mf(cursor.getFullYear(), year, 1970, 2099);
+
+      if (yearCheck &&
+          mf(cursor.getMonth()+1, month, 1,12) &&
+          domCheck && dowCheck &&
           mf(cursor.getHours(),   hour,  0,23) &&
           mf(cursor.getMinutes(), min,   0,59) &&
           mf(cursor.getSeconds(), sec,   0,59)) {
